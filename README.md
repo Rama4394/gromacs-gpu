@@ -24,5 +24,5 @@ docker run -it --gpus all gromacs-gpu:v1
 ## Verify
 
 ```bash
-gmx_mpi --version
+gmx --version
 ```
