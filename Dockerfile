@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.8.1-devel-ubuntu24.04
+FROM nvidia/cuda:12.8.1-devel-ubuntu24.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -10,11 +10,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     libfftw3-dev \
     openmpi-bin \
-    libopenmpi-dev \
-    python3 \
-    python3-pip \
-    vim \
-    nano
+    libopenmpi-dev
 
 WORKDIR /opt
 
@@ -32,15 +28,28 @@ RUN cmake .. \
     -DGMX_BUILD_OWN_FFTW=ON \
     -DGMX_MPI=ON \
     -DGMX_GPU=CUDA \
-    -DGMX_SIMD=AVX2_256 \
     -DCMAKE_INSTALL_PREFIX=/usr/local/gromacs
 
 RUN make -j4
+
 RUN make install
 
-RUN echo "source /usr/local/gromacs/bin/GMXRC" \
->> /etc/bash.bashrc
+FROM nvidia/cuda:12.8.1-runtime-ubuntu24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    openmpi-bin \
+    libfftw3-dev
+
+COPY --from=builder \
+    /usr/local/gromacs \
+    /usr/local/gromacs
+
+ENV PATH="/usr/local/gromacs/bin:${PATH}"
 
 RUN ln -s \
 /usr/local/gromacs/bin/gmx_mpi \
 /usr/local/gromacs/bin/gmx
+
+CMD ["/bin/bash"]
